@@ -52,11 +52,11 @@ def resolve_provider_endpoints(provider_key: Any, config_snapshot: Mapping[str, 
         except Exception:
             raw = ""
     if not raw:
-        raw = ctx.DEFAULT_PROVIDER if hasattr(ctx, "DEFAULT_PROVIDER") else "thu"
+        raw = ctx.DEFAULT_PROVIDER
     try:
         normalized = ctx.normalize_provider_name(raw) if hasattr(ctx, "normalize_provider_name") else raw.lower()
     except Exception:
-        normalized = raw.lower() if raw else "thu"
+        normalized = raw.lower() if raw else ctx.DEFAULT_PROVIDER
     # Try snapshot's available table first (authoritative frozen source)
     try:
         provider_cfg = snap.get("provider", {}) if isinstance(snap.get("provider"), dict) else {}

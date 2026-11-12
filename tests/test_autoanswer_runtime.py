@@ -219,7 +219,7 @@ class DispatchTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_completed_activity_is_not_dispatched(self):
         ctx.COMPLETED_QUESTION_SUBMISSIONS[_key("EX1")] = True
-        autoanswer_runtime._dispatch_activity(object(), self._act("EX1"), {"delay_seconds": 0, "llm": {}})
+        autoanswer_runtime._dispatch_activity(object(), self._act("EX1"), {"delay_seconds": 0, "llm": {}}, provider_key="thu")
         self.assertEqual(autoanswer_runtime._INFLIGHT_ACTIVITIES, {})  # completed -> no task
 
     async def test_completed_activity_is_isolated_by_profile(self):
@@ -268,8 +268,8 @@ class DispatchTest(unittest.IsolatedAsyncioTestCase):
         try:
             act = self._act("EX2")
             aa = {"delay_seconds": 0, "llm": {"api_key": "test-key"}}  # key present -> reaches (hung) prepare
-            autoanswer_runtime._dispatch_activity(object(), act, aa)
-            autoanswer_runtime._dispatch_activity(object(), act, aa)
+            autoanswer_runtime._dispatch_activity(object(), act, aa, provider_key="thu")
+            autoanswer_runtime._dispatch_activity(object(), act, aa, provider_key="thu")
             await asyncio.sleep(0)
             self.assertEqual(list(autoanswer_runtime._INFLIGHT_ACTIVITIES), [_key("EX2")])  # exactly one task
         finally:

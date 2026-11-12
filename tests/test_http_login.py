@@ -644,7 +644,7 @@ class TronHttpClientTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_submit_login_returns_outcome_on_success(self) -> None:
         session = MagicMock()
-        session.cookie_jar = FakeCookieJar([FakeCookie("session", "ilearn.thu.edu.tw")])
+        session.cookie_jar = FakeCookieJar([FakeCookie("session", tron_http.DEFAULT_ENDPOINTS.session_cookie_domain)])
         session.post.return_value = make_context_manager(
             make_response(url="https://ilearn.thu.edu.tw/home")
         )

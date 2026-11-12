@@ -591,6 +591,9 @@ class UxPhaseUtilityTest(unittest.TestCase):
 
             self.assertEqual(len(matches), 1)
             self.assertEqual(matches[0].provider, "thu")
+            self.assertEqual(match_pending_qr(base_dir, 88, provider="ncut"), [])
+            self.assertFalse(remove_pending_qr(base_dir, profile="default", rollcall_id=88, provider="ncut"))
+            self.assertTrue(remove_pending_qr(base_dir, profile="default", rollcall_id=88, provider="thu"))
 
     def test_adapter_text_maps_to_control_command(self) -> None:
         command = map_adapter_command("qr payload-data", adapter="discord", source_user_id="u1")

@@ -83,6 +83,7 @@ HIDDEN_IMPORTS = sorted(
             "troTHU.notification_bus",
             "troTHU.observability",
             "troTHU.ocr_captcha",
+            "troTHU.oaks_sso",
             "troTHU.ocr_sidecar",
             "troTHU.package_diagnostics",
             "troTHU.pending_qr",

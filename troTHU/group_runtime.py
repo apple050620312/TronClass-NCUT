@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover - direct script fallback
 
 
 def _school(value: ctx.Any) -> str:
-    return ctx.normalize_text(value).lower() or "thu"
+    return ctx.normalize_text(value).lower() or ctx.DEFAULT_PROVIDER
 
 
 def _simple_meta(config: ctx.Mapping[str, ctx.Any]) -> ctx.Dict[str, ctx.Any]:
@@ -44,7 +44,7 @@ def resolve_now_target(config: ctx.Mapping[str, ctx.Any]) -> ctx.Dict[str, ctx.A
             school = _school(
                 next(
                     (item.get("school") for item in accounts if ctx.normalize_text(item.get("user")).lower() == inferred.lower()),
-                    "thu",
+                    ctx.DEFAULT_PROVIDER,
                 )
             )
             return {"ok": True, "kind": "account", "user": inferred, "school": school, "inferred": True}
@@ -174,7 +174,7 @@ def build_group_plan(config: ctx.Mapping[str, ctx.Any] | None = None, *, dispatc
     # Determine target_school — from plan target
     target = plan_dict.get("target") if isinstance(plan_dict.get("target"), dict) else {}
     raw_school = ctx.normalize_text(target.get("school")) if isinstance(target, dict) else ""
-    target_school = raw_school.lower() or "thu"
+    target_school = raw_school.lower() or ctx.DEFAULT_PROVIDER
 
     # If group explicitly targets a school/provider different from monitor, resolve endpoints for target_school
     # NEVER mix monitor endpoints with target provider.
@@ -206,7 +206,7 @@ def build_group_plan(config: ctx.Mapping[str, ctx.Any] | None = None, *, dispatc
 
     # If no group target resolution happened and we still have no provider, fallback
     if not provider_key:
-        provider_key = base_provider or "thu"
+        provider_key = base_provider or ctx.DEFAULT_PROVIDER
     if endpoints is None:
         endpoints = base_endpoints
     if request_ssl is None:
@@ -288,7 +288,7 @@ def describe_group_target(config: ctx.Mapping[str, ctx.Any] | None = None) -> st
         members = summary["members"]
         line = "目前監控對象：群組 {}（school={}，成員 {} 人：{}）".format(
             summary["name"] or "?",
-            summary["school"] or "thu",
+            summary["school"] or ctx.DEFAULT_PROVIDER,
             len(members),
             "、".join(members) if members else "無",
         )

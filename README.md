@@ -1,7 +1,31 @@
-# Auto-Rollcall-thu-Tronclass
+# TronClass-NCUT 勤益特別版
+
+本分支預設使用國立勤益科技大學的 **https://tronclass.ncut.edu.tw**，帳密交由 **https://sso.ncut.edu.tw** 查驗，四位數驗證碼以本機 OCR 辨識，登入後自動接回 TronClass。新帳號的 `school` 預填 `NCUT`，留空也會使用勤益；已明確指定其他學校的舊設定仍依原設定執行。
+
+安裝原始碼版時請包含 OCR：
+
+```powershell
+python -m pip install -e ".[ocr]"
+python -m troTHU.tron
+# 安裝後也可使用 tronclass-ncut 指令
+```
+
+在程式產生的 `config.conf` 填入校務帳密即可，只有一個帳號時 `now` 可留空：
+
+```ini
+now =
+[save account]
+user = 你的勤益帳號
+passwd = 你的校務密碼
+school = NCUT
+```
+
+請使用 `school = NCUT` 或 `勤益` 以啟用自動 SSO 登入；填完整網址仍會使用原有的手動瀏覽器模式。此版保留 `troTHU` 模組與原有執行檔名稱，既有啟動指令可繼續使用。2026-11-12 已透過純 HTTP 實測 SSO 帳密與驗證碼、校務入口回程、TronClass session，以及學期／課程唯讀 API。
+
+本分支源自 [hot-YUser/auto-rollcall-thu-tronclass](https://github.com/hot-YUser/auto-rollcall-thu-tronclass)。以下保留上游功能說明與歷史公告；本次勤益登入整合未改變公告中數字點名、QR 等功能的限制。
 
 > [!CAUTION]
-> ## 🚨 現況公告（2026-09-22）：數字點名已失效，本專案已停止維護
+> ## 🚨 上游歷史公告（2026-09-22）：數字點名已失效，上游已停止維護
 >
 > **本專案目前不再維護、不再更新。一般詢問、功能請求與 bug 回報恕不回覆，也請不要再私訊。唯一歡迎的是下方所述的「重大發現」。**
 >
@@ -64,7 +88,7 @@
 
 ### 我只是想用（Windows，最簡單）
 
-1. 到 [Releases](https://github.com/hot-YUser/auto-rollcall-thu-tronclass/releases)，**只下載主程式這一個檔**（檔名形如 **`THU_Auto_Rollcall-vX.Y.Z-windows-x64.zip`**）。
+1. 若本分支 [Releases](https://github.com/apple050620312/TronClass-NCUT/releases) 有提供勤益版成品，下載主程式（檔名形如 **`THU_Auto_Rollcall-vX.Y.Z-windows-x64.zip`**）；沒有成品時請使用下方原始碼安裝方式。
 2. **整包解壓縮**到一個固定資料夾（不要在 zip 裡直接雙擊）。
 3. 進資料夾，執行 `auto-rollcall-thu-tronclass.exe`。
 
@@ -78,7 +102,7 @@
 ### 我想用原始碼跑（開發者）
 
 ```bash
-python -m pip install -e .
+python -m pip install -e ".[ocr]"
 python -m troTHU.tron
 ```
 
@@ -117,19 +141,19 @@ now =
 [save account]
 user = s1234567
 passwd = mypassword
-school = THU
+school = NCUT
 
 # [group]（選用）一人偵測、全員簽到。members 用逗號列出同組 user，再把 now 填成「class A」
 [group]
 class = A
-school = THU
+school = NCUT
 members = s1234567, s7654321
 
 # [teacher]（選用）QR 教師輔助帳號。course 留空會自動抓第一門課
 [teacher]
 user = teacher_account
 passwd = teacher_password
-school = TRONCLASS
+school = NCUT
 course =
 
 # [llm]（選用）自動答題用的 LLM 連線設定。api_key 直接填在這最簡單
@@ -486,8 +510,9 @@ POST {base}/api/exams/{exam_id}/submissions
 - `troTHU/number_runtime.py`、`radar_runtime.py`：兩種點名核心；雷達全球定位求解器在 `global_radar_solver.py`。
 - `troTHU/qr_teacher_runtime.py`：QR 教師帳號輔助流程（獨立的教師 session）。
 - `troTHU/autoanswer_runtime.py`、`answer_flow.py`、`quiz_engine.py`：自動答題子系統（偵測 → 備答 → 送出，單一入口動態分流）。
-- `troTHU/providers.py`＋`schools.toml`：學校登錄表的**邏輯**與**資料**分離——程式碼裡沒有任何學校字面值，原廠清單在 `schools.toml`，首次啟動寫進 `config.advanced.toml` 後那裡就是唯一真實來源。
+- `troTHU/providers.py`＋`schools.toml`：學校登錄表的**邏輯**與**資料**分離；原廠清單與預設學校在 `schools.toml`，首次啟動寫進 `config.advanced.toml` 後可在該處調整。勤益登錄固定帶 `kc_idp_hint=ncut-sso` 的校內入口，首頁探索失敗時仍會進校務 SSO。
 - `troTHU/login_flow.py`：**唯一的統一登入流程**（`run_login_flow`）。抓登入頁一次後，純依「偵測到的頁面特徵」分流——有無驗證碼、哪種驗證碼、是否首頁 SSO 探索、是否公有雲 email SPA、是否 NetIQ NAM——**絕不以學校為分支或命名**。
+- `troTHU/oaks_sso.py`：依 OAKS 表單特徵處理兩階段查驗（`verifyCode` → CSRF 帳密 POST），再跟隨校務入口的 Keycloak broker 連結與 CAS 表單取得 TronClass session；錯誤帳密立即停止，驗證碼失敗才有限次重試。
 - `troTHU/tron_http.py`：端點驅動的 HTTP client。`auth_runtime.py`：與學校無關的登入主流程（cookie 還原、session 驗證、瀏覽器後備）。
 
 ### 新增一所學校
@@ -501,7 +526,7 @@ base_url = "https://tronclass.my-school.edu.tw"
 aliases = ["我的學校"]   # 選填，讓使用者能用中文校名選校
 ```
 
-其餘欄位全選填；登入網址、登入方式、圖形驗證碼一律**自動偵測**。動手前先跑 `python -m troTHU.tron login-probe --school my_school` 看流程在真實伺服器上偵測到什麼。想送 PR 永久內建，就編輯資料檔 `troTHU/schools.toml` 加一個 `[<代號>]` 區塊。只有當某校的登入「協定」是現有特徵偵測完全涵蓋不到的全新型態時，才需要動 `login_flow.py` 加一條特徵偵測（以「協定／特徵」命名，絕不以學校命名）。
+其餘欄位全選填；`login_url` 可指定校內 SSO 入口，其餘登入方式與圖形驗證碼由頁面**自動偵測**。動手前先跑 `python -m troTHU.tron login-probe --school my_school` 看流程在真實伺服器上偵測到什麼。想永久內建，就編輯資料檔 `troTHU/schools.toml` 加一個 `[<代號>]` 區塊。只有登入協定出現全新型態時，才需要在 `login_flow.py` 加上協定特徵偵測。
 
 ### 安裝選用功能 / 測試
 

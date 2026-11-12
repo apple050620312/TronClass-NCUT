@@ -215,7 +215,7 @@ def _assist_scope_key(rollcall_id: str, *, profile_name: str = "", provider_key:
         try:
             provider = ctx.get_active_provider_key()
         except Exception:
-            provider = ctx.DEFAULT_PROVIDER if hasattr(ctx, "DEFAULT_PROVIDER") else "thu"
+            provider = ctx.DEFAULT_PROVIDER
     return "{}:{}:{}".format(provider, profile, rid)
 
 

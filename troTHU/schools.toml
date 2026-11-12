@@ -5,19 +5,19 @@
 #
 # Each [<key>] block — the key IS the school code (the config.conf `school` value):
 #   label    = display name
-#   base_url = site root; login URL / auth flow / image-captcha are all auto-detected
-#              at runtime, so there is deliberately NO per-school login_url/auth_flow.
+#   base_url = site root; auth flow / image-captcha are auto-detected at runtime.
+#   login_url = optional campus SSO entry (otherwise base_url + /login).
 #   aliases  = extra names (中文/英文) that resolve to this code (optional)
 #   notes    = informational only (optional)
 # Capabilities are uniform for every school and applied in code, not listed here.
 
-default = "thu"
+default = "ncut"
 
 [thu]
 label = "Tunghai University iLearn"
 base_url = "https://ilearn.thu.edu.tw"
 aliases = ["東海", "東海大學", "tunghai", "ilearn", "ilearn.thu", "thu.edu"]
-notes = "Primary supported provider. Kept compatible with the legacy config.conf flow."
+notes = "Original upstream provider; retained for existing configurations."
 
 [fju]
 label = "Fu Jen Catholic University TronClass"
@@ -129,9 +129,11 @@ base_url = "https://tronclass.ncue.edu.tw"
 aliases = ["國立彰化師範大學", "彰化師範大學", "彰師大"]
 
 [ncut]
-label = "National Chin-Yi University of Technology TronClass"
+label = "國立勤益科技大學 TronClass"
 base_url = "https://tronclass.ncut.edu.tw"
+login_url = "https://identity.ncut.edu.tw/auth/realms/ncut/protocol/cas/login?service=https%3A%2F%2Ftronclass.ncut.edu.tw%2F&kc_idp_hint=ncut-sso"
 aliases = ["國立勤益科技大學", "勤益科大", "勤益"]
+notes = "Default NCUT edition. Campus credentials and numeric captcha are verified by sso.ncut.edu.tw; the OAKS portal then completes the Keycloak CAS exchange."
 
 [nfu]
 label = "National Formosa University TronClass"

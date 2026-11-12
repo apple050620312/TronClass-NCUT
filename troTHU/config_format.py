@@ -150,7 +150,7 @@ def _strip_value(value: ctx.Any) -> str:
 def _canonical_school(value: ctx.Any) -> str:
     school_str = _strip_value(value)
     if not school_str:
-        return "thu"
+        return ctx.DEFAULT_PROVIDER
     kind, result = ctx.normalize_base_url(school_str)
     if kind == "alias":
         return result
@@ -165,7 +165,7 @@ def _assign_school(entry: ctx.Dict[str, ctx.Any], raw_value: ctx.Any) -> None:
     """Set entry['school'] to the canonical key and, when the value is a pasted base
     URL, also stash the original base_url. The URL is otherwise lost once collapsed
     to the url_<host> key, leaving merge unable to build the synthesized
-    interactive-browser provider (it would silently fall back to thu)."""
+    interactive-browser provider (it would silently fall back to the default school)."""
     entry["school"] = _canonical_school(raw_value)
     kind, base = ctx.normalize_base_url(_strip_value(raw_value))
     if kind == "url":
@@ -174,11 +174,11 @@ def _assign_school(entry: ctx.Dict[str, ctx.Any], raw_value: ctx.Any) -> None:
         entry.pop("base_url", None)
 
 
-def _profile_school(profile: ctx.Mapping[str, ctx.Any], default: str = "thu") -> str:
+def _profile_school(profile: ctx.Mapping[str, ctx.Any], default: str = ctx.DEFAULT_PROVIDER) -> str:
     try:
         available_providers = {provider.key for provider in ctx.list_all_providers()}
     except Exception:
-        available_providers = {"thu", "tku", "fju", "tronclass", "scu"}
+        available_providers = {ctx.DEFAULT_PROVIDER}
     try:
         cfg_available = ctx.CONFIG.get("provider", {}).get("available", {})
         if isinstance(cfg_available, ctx.Mapping):
@@ -242,7 +242,7 @@ def parse_basic_config_text(text: str) -> ctx.Dict[str, ctx.Any]:
     simple: ctx.Dict[str, ctx.Any] = {
         "now": "",
         "accounts": [],
-        "teacher": {"user": "", "passwd": "", "school": "tronclass", "course": ""},
+        "teacher": {"user": "", "passwd": "", "school": ctx.DEFAULT_PROVIDER, "course": ""},
         "llm": {key: "" for key in LLM_CONNECTION_KEYS},
         "groups": [],
         "operating": {},
@@ -261,7 +261,7 @@ def parse_basic_config_text(text: str) -> ctx.Dict[str, ctx.Any]:
             passwd = _strip_value(current_account.get("passwd"))
             if user or passwd:
                 entry = {"user": user, "passwd": passwd}
-                _assign_school(entry, current_account.get("school", "thu"))
+                _assign_school(entry, current_account.get("school", ctx.DEFAULT_PROVIDER))
                 simple["accounts"].append(entry)
             current_account = {}
 
@@ -269,7 +269,7 @@ def parse_basic_config_text(text: str) -> ctx.Dict[str, ctx.Any]:
         nonlocal current_group
         if current_group:
             cls = _strip_value(current_group.get("class"))
-            school = _canonical_school(current_group.get("school", "thu"))
+            school = _canonical_school(current_group.get("school", ctx.DEFAULT_PROVIDER))
             members_str = _strip_value(current_group.get("members"))
             # Drop the template's example members (AAAAA,BBBBB) — they are guidance,
             # not real users, and have no matching account.
@@ -412,7 +412,7 @@ def parse_legacy_basic_config_text(text: str) -> ctx.Dict[str, ctx.Any]:
     simple: ctx.Dict[str, ctx.Any] = {
         "now": "",
         "accounts": [],
-        "teacher": {"user": "", "passwd": "", "school": "tronclass", "course": ""},
+        "teacher": {"user": "", "passwd": "", "school": ctx.DEFAULT_PROVIDER, "course": ""},
         "llm": {key: "" for key in LLM_CONNECTION_KEYS},
         "groups": [],
         "operating": {},
@@ -495,19 +495,19 @@ def parse_legacy_basic_config_text(text: str) -> ctx.Dict[str, ctx.Any]:
             if key == "user":
                 if current_account is not None and any(current_account.get(item) for item in ("user", "passwd", "school")):
                     finish_account()
-                current_account = {"user": value, "passwd": "", "school": "thu"}
+                current_account = {"user": value, "passwd": "", "school": ctx.DEFAULT_PROVIDER}
                 continue
             if current_account is None:
-                current_account = {"user": "", "passwd": "", "school": "thu"}
+                current_account = {"user": "", "passwd": "", "school": ctx.DEFAULT_PROVIDER}
             if key in {"passwd", "password"}:
                 current_account["passwd"] = value
             elif key == "school":
                 current_account["school"] = value  # raw; canonicalized in finish_account so base_url survives
             continue
         if section == "teacher":
-            teacher = simple.setdefault("teacher", {"user": "", "passwd": "", "school": "tronclass", "course": ""})
+            teacher = simple.setdefault("teacher", {"user": "", "passwd": "", "school": ctx.DEFAULT_PROVIDER, "course": ""})
             if not isinstance(teacher, dict):
-                teacher = {"user": "", "passwd": "", "school": "tronclass", "course": ""}
+                teacher = {"user": "", "passwd": "", "school": ctx.DEFAULT_PROVIDER, "course": ""}
                 simple["teacher"] = teacher
             if key == "user":
                 teacher["user"] = value
@@ -521,10 +521,10 @@ def parse_legacy_basic_config_text(text: str) -> ctx.Dict[str, ctx.Any]:
         if section == "group":
             if key == "class":
                 finish_group()
-                current_group = {"class": value, "school": "thu", "users": []}
+                current_group = {"class": value, "school": ctx.DEFAULT_PROVIDER, "users": []}
                 continue
             if current_group is None:
-                current_group = {"class": "", "school": "thu", "users": []}
+                current_group = {"class": "", "school": ctx.DEFAULT_PROVIDER, "users": []}
             if key == "school":
                 current_group["school"] = _canonical_school(value)
             elif key == "user":
@@ -615,15 +615,14 @@ def _all_school_codes() -> ctx.List[str]:
     try:
         return sorted({p.key.upper() for p in ctx.list_all_providers() if getattr(p, "user_visible", True)})
     except Exception:
-        return ["THU", "TKU", "SCU", "FJU", "TRONCLASS"]
+        return [ctx.DEFAULT_PROVIDER.upper()]
 
 
 def _render_school_value(raw: ctx.Any) -> str:
-    """Canonical UPPER code for a configured school, or a neutral placeholder when
-    nothing is set — never a privileged default like THU."""
+    """Canonical school code, defaulting to the edition's school when blank."""
     if not _strip_value(raw):
-        return "（填上方任一代號）"
-    return (_canonical_school(raw) or "thu").upper()
+        return ctx.DEFAULT_PROVIDER.upper()
+    return (_canonical_school(raw) or ctx.DEFAULT_PROVIDER).upper()
 
 
 def render_basic_config(simple_dict: ctx.Mapping[str, ctx.Any] | None = None) -> str:
@@ -636,7 +635,8 @@ def render_basic_config(simple_dict: ctx.Mapping[str, ctx.Any] | None = None) ->
         groups.append({"class": "A", "school": "", "users": [""]})
 
     lines = [
-        "# ===== 基本設定 config.conf =====（改完存檔關閉記事本即自動套用）",
+        "# ===== TronClass 勤益特別版 config.conf =====（改完存檔關閉記事本即自動套用）",
+        "# 預設 NCUT：tronclass.ncut.edu.tw；以 sso.ncut.edu.tw 校務帳密及數字驗證碼登入。",
         "# now：要用哪個帳號跑？填某帳號的 user，或填「class 群組名」。只有一個帳號可留空。",
         "#       也可填學校網址（如 https://tronclass.你的學校.edu.tw）→ 改用手動瀏覽器登入，免填帳密。",
         "now = {}".format(simple.get("now") or ""),
@@ -664,7 +664,7 @@ def render_basic_config(simple_dict: ctx.Mapping[str, ctx.Any] | None = None) ->
         "[teacher]",
         "user = {}".format(teacher.get("user") or ""),
         "passwd = {}".format(teacher.get("passwd") or ""),
-        "school = {}".format((_canonical_school(teacher.get("school") or "tronclass") or "tronclass").upper()),
+        "school = {}".format((_canonical_school(teacher.get("school") or ctx.DEFAULT_PROVIDER) or ctx.DEFAULT_PROVIDER).upper()),
         "course = {}".format(teacher.get("course") or ""),
         ""
     ])
@@ -1009,8 +1009,8 @@ def _simple_target_account(simple: ctx.Mapping[str, ctx.Any]) -> ctx.Dict[str, s
                 for user in users:
                     for account in accounts:
                         if _strip_value(account.get("user")).lower() == _strip_value(user).lower():
-                            group_school = _canonical_school(group.get("school", "thu"))
-                            account_school = _canonical_school(account.get("school", "thu"))
+                            group_school = _canonical_school(group.get("school", ctx.DEFAULT_PROVIDER))
+                            account_school = _canonical_school(account.get("school", ctx.DEFAULT_PROVIDER))
                             if account_school == group_school and ctx.has_real_credential(account.get("passwd")):
                                 return {
                                     "user": _strip_value(account.get("user")),
@@ -1049,7 +1049,7 @@ def merge_basic_and_advanced_config(simple: ctx.Mapping[str, ctx.Any], advanced:
     config["teacher"] = {
         "user": _strip_value(teacher_source.get("user")),
         "passwd": _strip_value(teacher_source.get("passwd")),
-        "school": _canonical_school(teacher_source.get("school") or "tronclass"),
+        "school": _canonical_school(teacher_source.get("school") or ctx.DEFAULT_PROVIDER),
         "course": _strip_value(teacher_source.get("course")),
     }
     # config.conf [llm] connection keys override the advanced autoanswer.llm. Blank -> keep
@@ -1079,10 +1079,10 @@ def merge_basic_and_advanced_config(simple: ctx.Mapping[str, ctx.Any], advanced:
         }
     current = account["user"] if account["user"] in profiles else ""
     if not profiles:
-        profiles["default"] = {"user": "", "passwd": "", "label": "", "school": "thu"}
+        profiles["default"] = {"user": "", "passwd": "", "label": "", "school": ctx.DEFAULT_PROVIDER}
         current = "default"
     elif not current:
-        profiles.setdefault("unset", {"user": "", "passwd": "", "label": "", "school": account["school"] or "thu"})
+        profiles.setdefault("unset", {"user": "", "passwd": "", "label": "", "school": account["school"] or ctx.DEFAULT_PROVIDER})
         current = "unset"
     config["accounts"] = {"current": current, "profiles": profiles}
     url_providers = {}
@@ -1118,7 +1118,7 @@ def merge_basic_and_advanced_config(simple: ctx.Mapping[str, ctx.Any], advanced:
                 "auth_flow": "interactive_browser",
             }
     provider["available"] = provider_available
-    provider["current"] = account["school"] or provider.get("current") or "thu"
+    provider["current"] = account["school"] or provider.get("current") or ctx.DEFAULT_PROVIDER
     config["provider"] = provider
     operating: ctx.Dict[int, ctx.Any] = {}
     for simple_day, entry in (simple.get("operating") or {}).items():
@@ -1188,7 +1188,7 @@ def split_normalized_config(config: ctx.Mapping[str, ctx.Any]) -> ctx.Tuple[ctx.
     normalized_teacher = normalized.get("teacher") if isinstance(normalized.get("teacher"), dict) else {}
     teacher_user = _strip_value(teacher.get("user")) or _strip_value(normalized_teacher.get("user"))
     teacher_passwd = _strip_value(teacher.get("passwd")) or _strip_value(normalized_teacher.get("passwd"))
-    teacher_school = _canonical_school(_strip_value(teacher.get("school")) or normalized_teacher.get("school") or "tronclass")
+    teacher_school = _canonical_school(_strip_value(teacher.get("school")) or normalized_teacher.get("school") or ctx.DEFAULT_PROVIDER)
     teacher_course = _strip_value(teacher.get("course")) or _strip_value(normalized_teacher.get("course"))
     simple_teacher = {
         "user": teacher_user,

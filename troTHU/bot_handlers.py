@@ -324,7 +324,7 @@ class BotHandlerBridge:
                         _snap_provider = _tmp.provider_key
                         _snap_endpoints = _tmp.endpoints
                     except Exception:
-                        _snap_provider = "thu"
+                        _snap_provider = self.tron.DEFAULT_PROVIDER
                         _snap_endpoints = None
                 # Derive user_no from snapshot for this profile
                 try:
@@ -398,7 +398,7 @@ class BotHandlerBridge:
                 pass
         except Exception:
             _single_profile = self.tron.normalize_profile_name(profile)
-            _single_provider = "thu"
+            _single_provider = self.tron.DEFAULT_PROVIDER
             _single_user = ""
             _single_endpoints = None
             _single_ssl = None

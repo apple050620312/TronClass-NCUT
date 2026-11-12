@@ -231,7 +231,7 @@ async def handle_rollcall_decision(
         except Exception:
             _rr_dctx = None
     _rr_profile_name = ctx.normalize_profile_name(profile_name) if profile_name else "default"
-    _rr_provider_key = ctx.normalize_text(provider_key) or (ctx.DEFAULT_PROVIDER if hasattr(ctx, "DEFAULT_PROVIDER") else "thu")
+    _rr_provider_key = ctx.normalize_text(provider_key) or (ctx.DEFAULT_PROVIDER)
     _rr_my_user_no = ctx.normalize_text(my_user_no)
     _rr_endpoints = endpoints
     _rr_request_ssl = request_ssl

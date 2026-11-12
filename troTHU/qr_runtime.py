@@ -450,7 +450,7 @@ async def finalize_qr_submission(
         try:
             _provider = ctx.get_active_provider_key()
         except Exception:
-            _provider = ctx.DEFAULT_PROVIDER if hasattr(ctx, "DEFAULT_PROVIDER") else "thu"
+            _provider = ctx.DEFAULT_PROVIDER
     if _ep is None:
         try:
             _ep = ctx.get_active_http_endpoints()

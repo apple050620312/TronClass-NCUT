@@ -32,15 +32,15 @@ class ProviderConfigTest(unittest.TestCase):
         self.assertIn("/api/current-semester-info", provider.current_semester_url)
         self.assertIn("/api/my-courses", provider.courses_url)
 
-    def test_aliases_and_unknown_provider_fall_back_to_thu(self) -> None:
-        self.assertEqual(get_provider("Tunghai").key, DEFAULT_PROVIDER)
+    def test_aliases_and_unknown_provider_fall_back_to_default(self) -> None:
+        self.assertEqual(get_provider("Tunghai").key, "thu")
         self.assertEqual(get_provider("www.tronclass.com.tw").key, "tronclass")
         self.assertEqual(get_provider("not-a-provider").key, DEFAULT_PROVIDER)
 
     def test_registry_marks_fju_visible_with_ocr_captcha_flow(self) -> None:
         registry = provider_registry_config()
 
-        self.assertEqual(registry["current"], "thu")
+        self.assertEqual(registry["current"], "ncut")
         self.assertFalse(registry["allow_experimental"])
         self.assertTrue(registry["available"]["thu"]["ready"])
         self.assertTrue(registry["available"]["fju"]["ready"])
@@ -144,7 +144,7 @@ class ProviderConfigTest(unittest.TestCase):
     def test_tron_normalize_config_adds_provider_and_research_defaults(self) -> None:
         normalized = tron.normalize_config({"config": {"user-agent": []}})
 
-        self.assertEqual(normalized["provider"]["current"], "thu")
+        self.assertEqual(normalized["provider"]["current"], "ncut")
         self.assertFalse(normalized["provider"]["allow_experimental"])
         self.assertIn("thu", normalized["provider"]["available"])
         self.assertFalse(normalized["research"]["enabled"])
@@ -163,10 +163,13 @@ class ProviderConfigTest(unittest.TestCase):
         # NOU is no longer special-cased: login_url derives like everyone else, and the
         # /cas/login form is reached at runtime by login_flow's candidate probing.
         self.assertEqual(get_provider("nou").login_url, "https://tronclass.nou.edu.tw/login")
-        # Formerly per-school captcha/email/loginSettings flows — now all uniform "auto".
+        # Captcha/email/loginSettings flows all use uniform "auto" detection.
         for key in ("ntou", "asia", "nfu", "mkc", "kwnc", "ncue", "ncut", "ntub", "yuntech", "cityumo", "lhu"):
             self.assertEqual(get_provider(key).auth_flow, "auto", key)
-            self.assertEqual(get_provider(key).login_url, get_provider(key).base_url.rstrip("/") + "/login", key)
+            if key == "ncut":
+                self.assertIn("kc_idp_hint=ncut-sso", get_provider(key).login_url)
+            else:
+                self.assertEqual(get_provider(key).login_url, get_provider(key).base_url.rstrip("/") + "/login", key)
         self.assertEqual(get_provider("lhu").base_url, "https://elearn.lhu.edu.tw")
         # Chinese aliases resolve to the right key
         self.assertEqual(get_provider("靜宜大學").key, "pu")
@@ -288,7 +291,7 @@ class ResearchModeConfigTest(unittest.TestCase):
 
         report = tron.status_report()
 
-        self.assertEqual(report["provider"]["key"], "thu")
+        self.assertEqual(report["provider"]["key"], "ncut")
         self.assertIn("provider_support", report)
         self.assertTrue(report["provider_support"]["daily_ready"])
         self.assertTrue(report["course_discovery"]["enabled"])

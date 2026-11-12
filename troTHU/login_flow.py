@@ -10,6 +10,7 @@ the page — never on the school. The feature taxonomy (the only branch keys):
   - NetIQ NAM (NEAI)            -> nam handshake (SSO host derived from the page)
   - SPA email form (<login-view>) -> public-cloud email POST
   - generic credential form     -> detect username/password by input type + name hints
+  - OAKS AJAX portal            -> verify numeric captcha, CSRF login, CAS broker exchange
   - captcha (form field driven) -> static_image | keycloak_json  (else none)
 
 The captcha protocol is decided by the FORM (a captchaKey/captchaCode field => Keycloak
@@ -29,7 +30,7 @@ import re
 from dataclasses import dataclass, field
 from http.cookies import SimpleCookie
 from typing import Any, Dict, Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import troTHU.tron_http as tron_http
 
@@ -396,7 +397,7 @@ CAPTCHA_KEYCLOAK_JSON = "keycloak_json"
 
 @dataclass
 class ResolvedForm:
-    kind: str                      # 'credential' | 'email_spa' | 'nam'
+    kind: str                      # 'credential' | 'email_spa' | 'nam' | 'oaks_ajax'
     form: tron_http.LoginForm
     captcha: str = CAPTCHA_NONE
     captcha_field: str = ""
@@ -418,13 +419,18 @@ def _classify_captcha(detected: Dict[str, Any], field_names: Any) -> str:
 
 
 def _login_url_candidates(endpoints: Any) -> list[str]:
-    """Generic, base_url-derived login-page candidates, identical for every school:
-    the configured login_url (= base_url + /login) first, then base_url + /cas/login.
-    No per-school override — a school that only serves its form at /cas/login is reached
-    by the second candidate."""
+    """Try the configured login entry, then /cas/login when no campus IdP is selected.
+
+    An explicit kc_idp_hint keeps campus credentials on that SSO flow. Other forms
+    still use the shared /cas/login discovery fallback.
+    """
     primary = str(getattr(endpoints, "login_url", "") or "")
     base = str(getattr(endpoints, "base_url", "") or "").rstrip("/")
     candidates = [primary]
+    # A selected campus IdP must stay authoritative even if its form changes;
+    # trying the generic CAS page would submit campus credentials to another flow.
+    if "kc_idp_hint" in parse_qs(urlparse(primary).query):
+        return [c for c in candidates if c]
     cas = base + "/cas/login" if base else ""
     if cas and cas != primary:
         candidates.append(cas)
@@ -455,10 +461,12 @@ async def _resolve_form_at(client: tron_http.TronHttpClient, login_url: str) -> 
 
     detected = detect_sso_form(html)
     if detected and detected.get("password_field"):
+        from troTHU.oaks_sso import is_oaks_login
+
         action = urljoin(url, detected["action"]) if detected.get("action") else url
         field_names = list((detected.get("fields") or {}).keys())
         return ResolvedForm(
-            kind="credential",
+            kind="oaks_ajax" if is_oaks_login(html, detected) else "credential",
             form=tron_http.LoginForm(
                 action_url=action,
                 fields=detected.get("fields") or {},
@@ -490,13 +498,13 @@ async def _resolve_form_at(client: tron_http.TronHttpClient, login_url: str) -> 
 
 async def resolve_credential_form(client: tron_http.TronHttpClient) -> ResolvedForm:
     """Resolve the login page to a credential form, purely by feature. Tries the
-    base_url-derived candidates (/login then /cas/login) in order; the login_url is
+    configured entry followed by /cas/login when appropriate. The login_url is
     already loginSettings-resolved by the caller when applicable."""
     for login_url in _login_url_candidates(client.endpoints):
         resolved = await _resolve_form_at(client, login_url)
         if resolved is not None:
             return resolved
-    raise tron_http.LoginPageChangedError("無法在 /login 或 /cas/login 定位登入表單。")
+    raise tron_http.LoginPageChangedError("無法在設定的登入入口定位帳密表單。")
 
 
 async def _submit_plain(client, form: tron_http.LoginForm, user: str, passwd: str) -> tron_http.LoginOutcome:
@@ -635,6 +643,9 @@ async def _submit_nam(client, resolved: ResolvedForm, user: str, passwd: str) ->
 
 
 async def submit_credentials(client, resolved: ResolvedForm, user: str, passwd: str) -> tron_http.LoginOutcome:
+    if resolved.kind == "oaks_ajax":
+        from troTHU.oaks_sso import submit_oaks_login
+        return await submit_oaks_login(client, resolved, user, passwd)
     if resolved.kind == "nam":
         return await _submit_nam(client, resolved, user, passwd)
     if resolved.captcha == CAPTCHA_KEYCLOAK_JSON:

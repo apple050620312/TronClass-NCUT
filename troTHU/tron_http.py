@@ -20,11 +20,14 @@ except ModuleNotFoundError:  # pragma: no cover - exercised by CLI-only environm
 
     aiohttp = _MissingAiohttp()  # type: ignore
 
-TRON = "https://ilearn.thu.edu.tw"
-LOGIN_URL = (
-    "https://tcidentity.thu.edu.tw/auth/realms/thu/protocol/cas/login"
-    "?ui_locales=zh-TW&service=https%3A//ilearn.thu.edu.tw/login&locale=zh_TW"
-)
+try:
+    from troTHU.providers import get_provider
+except ImportError:  # pragma: no cover - direct script fallback
+    from providers import get_provider
+
+_DEFAULT_PROVIDER = get_provider()
+TRON = _DEFAULT_PROVIDER.base_url
+LOGIN_URL = _DEFAULT_PROVIDER.login_url
 ROLLCALLS_URL = "{}/api/radar/rollcalls?api_version=1.1.0".format(TRON)
 CURRENT_SEMESTER_URL = "{}/api/current-semester-info".format(TRON)
 COURSES_URL = "{}/api/my-courses?page=1&page_size=50".format(TRON)
@@ -153,7 +156,7 @@ class TronHttpEndpoints:
     rollcalls_url: str = ROLLCALLS_URL
     current_semester_url: str = CURRENT_SEMESTER_URL
     courses_url: str = COURSES_URL
-    session_cookie_domain: str = "ilearn.thu.edu.tw"
+    session_cookie_domain: str = urlparse(TRON).hostname or ""
     auth_flow: str = "cas"
     # Image-captcha shape for the cas_ocr_captcha flow. Defaults are a 4-digit numeric
     # captcha.jpg; per-school overrides come from provider config.
@@ -192,8 +195,8 @@ def endpoints_from_provider(provider: Any) -> TronHttpEndpoints:
         captcha_length = IMAGE_CAPTCHA_LENGTH
     return TronHttpEndpoints(
         base_url=base_url,
-        login_url=str(provider.get("login_url") or LOGIN_URL),
-        rollcalls_url=str(provider.get("rollcalls_url") or ROLLCALLS_URL),
+        login_url=str(provider.get("login_url") or base_url + "/login"),
+        rollcalls_url=str(provider.get("rollcalls_url") or base_url + "/api/radar/rollcalls?api_version=1.1.0"),
         current_semester_url=str(
             provider.get("current_semester_url") or "{}/api/current-semester-info".format(base_url)
         ),

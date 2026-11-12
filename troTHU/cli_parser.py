@@ -12,7 +12,7 @@ def __getattr__(name: str):
 
 
 def build_arg_parser() -> ctx.argparse.ArgumentParser:
-    parser = ctx.argparse.ArgumentParser(description='THU TronClass auto rollcall helper')
+    parser = ctx.argparse.ArgumentParser(description='TronClass 勤益特別版（NCUT SSO）')
     subcommands = parser.add_subparsers(dest='command')
     run_parser = subcommands.add_parser('run', help='啟動無 UI 監控 console')
     run_mode = run_parser.add_mutually_exclusive_group()

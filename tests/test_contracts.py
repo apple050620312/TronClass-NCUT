@@ -23,22 +23,19 @@ class NoSchoolPrivilegeTest(unittest.TestCase):
             "built-in providers must all ship the uniform auth_flow 'auto'; got {}".format(sorted(flows)),
         )
 
-    def test_no_provider_overrides_login_url(self) -> None:
-        # login_url must derive from base_url for EVERY provider (no per-school override,
-        # including NOU's old /cas/login). Schools whose form lives at /cas/login are reached
-        # by login_flow's runtime candidate probing, not a registry override.
+    def test_provider_login_urls_honor_seed_entries(self) -> None:
+        # A campus SSO entry in data takes precedence over the base/login default.
+        seed = providers._load_seed()
         for p in providers.list_all_providers():
             self.assertEqual(
-                p.login_url, p.base_url.rstrip("/") + "/login",
-                "provider {!r} overrides login_url ({!r}); derive it from base_url".format(p.key, p.login_url),
+                p.login_url, seed[p.key].get("login_url") or p.base_url.rstrip("/") + "/login",
             )
 
     def test_seed_carries_no_per_school_login_presets(self) -> None:
         # The factory seed (schools.toml) is the ONLY place school data is written down.
-        # It must carry zero per-school login privilege: no login_url / auth_flow / captcha
-        # keys anywhere, and every school must have a base_url. Login is feature-detected.
+        # Only the entry URL is configurable; protocol/captcha detection stays shared.
         seed = providers._load_seed()
-        banned = {"login_url", "auth_flow", "captcha_field", "captcha_length",
+        banned = {"auth_flow", "captcha_field", "captcha_length",
                   "captcha_charset", "captcha_image_name"}
         self.assertTrue(seed, "schools.toml seed must load")
         for key, block in seed.items():

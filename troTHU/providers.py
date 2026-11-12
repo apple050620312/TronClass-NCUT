@@ -11,7 +11,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
 
 
 # Fallback only; the real value comes from schools.toml's `default` key on load.
-DEFAULT_PROVIDER = "thu"
+DEFAULT_PROVIDER = "ncut"
 
 
 @dataclass(frozen=True)
@@ -60,9 +60,8 @@ class ProviderDefinition:
     aliases: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        # No per-school login URL: every provider's login_url derives from base_url.
-        # The flow probes /login then /cas/login at runtime (see login_flow), so a school
-        # that only serves its form at /cas/login needs no registry override.
+        # Providers without an explicit campus SSO entry derive it from base_url.
+        # Generic entries also probe /cas/login at runtime (see login_flow).
         if not self.login_url:
             object.__setattr__(self, "login_url", str(self.base_url or "").rstrip("/") + "/login")
         endpoints = tronclass_api_endpoints(self.base_url)
@@ -183,6 +182,7 @@ def _provider_from_seed(key: str, block: Mapping[str, Any]) -> ProviderDefinitio
         key=key,
         label=str(block.get("label") or key.upper()),
         base_url=str(block.get("base_url") or ""),
+        login_url=str(block.get("login_url") or ""),
         status="ready",
         support_level="ready",
         capabilities=_STANDARD_CAPS,
@@ -207,7 +207,7 @@ def _build_alias_map(providers: Mapping[str, ProviderDefinition], default: str) 
 
 def _registry_from_seed() -> Tuple[Dict[str, ProviderDefinition], Dict[str, str], str]:
     seed = _load_seed()
-    default = str(seed.get("default") or "thu")
+    default = str(seed.get("default") or DEFAULT_PROVIDER)
     providers: Dict[str, ProviderDefinition] = {}
     for key, block in seed.items():
         if key == "default" or not isinstance(block, Mapping):

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "auto-rollcall-thu-tronclass"
 version = "1.9.0a2"
-description = "THU TronClass auto rollcall helper"
+description = "NCUT TronClass helper with campus SSO and numeric captcha login"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [
   { name = "troTHU contributors" },
 ]
-keywords = ["tronclass", "ilearn", "thu", "rollcall", "attendance"]
+keywords = ["tronclass", "ncut", "sso", "rollcall", "attendance"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
@@ -50,11 +50,12 @@ ocr = ["ddddocr>=1.6"]
 dev = ["PyInstaller>=6", "keyring>=24", "ruff==0.15.20", "playwright>=1.44"]
 
 [project.urls]
-Homepage = "https://github.com/hot-YUser/auto-rollcall-thu-tronclass"
-Repository = "https://github.com/hot-YUser/auto-rollcall-thu-tronclass"
-Issues = "https://github.com/hot-YUser/auto-rollcall-thu-tronclass/issues"
+Homepage = "https://github.com/apple050620312/TronClass-NCUT"
+Repository = "https://github.com/apple050620312/TronClass-NCUT"
+Issues = "https://github.com/apple050620312/TronClass-NCUT/issues"
 
 [project.scripts]
+tronclass-ncut = "troTHU.tron:main"
 trothu = "troTHU.tron:main"
 auto-rollcall-thu-tronclass = "troTHU.tron:main"
 

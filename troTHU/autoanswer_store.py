@@ -14,6 +14,11 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Set
 
+try:
+    from troTHU.providers import DEFAULT_PROVIDER
+except ImportError:  # pragma: no cover - direct script fallback
+    from providers import DEFAULT_PROVIDER
+
 STATE_FILENAME = "autoanswer_completed.json"
 STORE_VERSION = 2
 
@@ -28,7 +33,7 @@ def _profile_key(profile: Any) -> str:
 
 def _provider_key(provider: Any) -> str:
     text = str(provider or "").strip().lower()
-    return text or "thu"
+    return text or DEFAULT_PROVIDER
 
 
 def _is_versioned(data: Any) -> bool:

@@ -7,12 +7,16 @@ from typing import Any, Dict, List, Optional
 
 try:
     from troTHU.debug_capture import sanitize_debug_payload
+    from troTHU.providers import DEFAULT_PROVIDER
 except ImportError:  # pragma: no cover - script execution fallback
     from debug_capture import sanitize_debug_payload
+    from providers import DEFAULT_PROVIDER
 
 
 DEFAULT_PENDING_QR_TTL_SECONDS = 600
-DEFAULT_PENDING_QR_PROVIDER = "thu"
+DEFAULT_PENDING_QR_PROVIDER = DEFAULT_PROVIDER
+# Records written before provider namespaces existed belonged to upstream THU.
+LEGACY_PENDING_QR_PROVIDER = "thu"
 
 
 def _normalize_provider(provider: Any) -> str:
@@ -136,7 +140,7 @@ def list_pending_qr(base_dir: Path, *, include_expired: bool = False) -> List[Pe
                     profile=str(record.get("profile") or "default"),
                     rollcall_id=str(record.get("rollcall_id") or ""),
                     rollcall_type=str(record.get("rollcall_type") or "qrcode"),
-                    provider=_normalize_provider(record.get("provider")),
+                    provider=_normalize_provider(record.get("provider") or LEGACY_PENDING_QR_PROVIDER),
                     source_adapter=str(record.get("source_adapter") or ""),
                     source_channel_id=str(record.get("source_channel_id") or ""),
                     message=str(record.get("message") or ""),
@@ -181,7 +185,7 @@ def remove_pending_qr(
     if key in records:
         del records[key]
         removed = True
-    if provider_text == DEFAULT_PENDING_QR_PROVIDER and legacy_key in records:
+    if provider_text == LEGACY_PENDING_QR_PROVIDER and legacy_key in records:
         del records[legacy_key]
         removed = True
     if not removed:

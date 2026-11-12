@@ -157,7 +157,7 @@ def config_show_command(json_output: bool=False) -> int:
         return 0
     print("設定摘要")
     print("目前 profile: {}".format(summary.get("active_profile", "default")))
-    print("Provider: {}".format(summary.get("provider", "thu")))
+    print("Provider: {}".format(summary.get("provider", ctx.DEFAULT_PROVIDER)))
     print("常用區塊: {}".format(", ".join(summary.get("compact_keys", [])) or "-"))
     print("進階覆寫: {}".format(", ".join(summary.get("advanced_keys", [])) or "無"))
     return 0

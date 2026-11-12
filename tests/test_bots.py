@@ -1011,6 +1011,7 @@ def make_workspace_temp_dir__bot_handlers() -> Path:
 def make_config__bot_handlers():
     return tron.normalize_config(
         {
+            "provider": {"current": "thu"},
             "account": {"user": "user1", "passwd": "pass1"},
             "accounts": {
                 "current": "default",

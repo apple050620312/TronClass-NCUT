@@ -54,14 +54,14 @@ except ModuleNotFoundError:  # pragma: no cover - dependency-missing CLI fallbac
 
     yaml = _MissingYaml()  # type: ignore
 
-# These three names are referenced directly (bare) inside this module, so they must
+# These names are referenced directly (bare) inside this module, so they must
 # stay statically importable -- not only dynamically bound by the loader below.
 try:
-    from troTHU.providers import provider_registry_config
+    from troTHU.providers import DEFAULT_PROVIDER, provider_registry_config
     from troTHU.research_mode import normalize_research_mode_config
     from troTHU.radar_solver import DEFAULT_BOUNDARY_POINTS
 except ImportError:  # pragma: no cover - direct-script fallback
-    from providers import provider_registry_config
+    from providers import DEFAULT_PROVIDER, provider_registry_config
     from research_mode import normalize_research_mode_config
     from radar_solver import DEFAULT_BOUNDARY_POINTS
 
@@ -439,18 +439,19 @@ EXAMPLE_PLACEHOLDER_VALUES = {
 # program opens this file for editing until real credentials are filled in.
 #
 # The __SCHOOL_CODES__ sentinel is replaced (below) with the live registry codes so the
-# first page a user sees lists EVERY supported school equally and stays current — no
-# school is singled out, and the list never drifts when a school is added.
+# first page lists every supported school and stays current. NCUT is the default
+# in this edition; existing explicit selections still use their configured school.
 def _default_basic_config_school_code_lines() -> str:
     try:
         import troTHU.providers as _p  # providers imports no troTHU module → no import cycle
         codes = sorted({prov.key.upper() for prov in _p.list_all_providers() if getattr(prov, "user_visible", True)})
     except Exception:
-        codes = ["THU", "TKU", "SCU", "FJU", "TRONCLASS"]
+        codes = [DEFAULT_PROVIDER.upper()]
     return "\n".join("#   " + ", ".join(codes[i:i + 8]) for i in range(0, len(codes), 8))
 
 
-DEFAULT_BASIC_CONFIG_TEMPLATE = """# ===== 基本設定 config.conf =====（改完存檔關閉記事本即自動套用）
+DEFAULT_BASIC_CONFIG_TEMPLATE = """# ===== TronClass 勤益特別版 config.conf =====（改完存檔關閉記事本即自動套用）
+# 預設 NCUT：tronclass.ncut.edu.tw；以 sso.ncut.edu.tw 校務帳密及數字驗證碼登入。
 # now：要用哪個帳號跑？填某帳號的 user，或填「class 群組名」。只有一個帳號可留空。
 #       也可填學校網址（如 https://tronclass.你的學校.edu.tw）→ 改用手動瀏覽器登入，免填帳密。
 now = AAAAA 或 class A 或 「class A」 擇一
@@ -463,13 +464,13 @@ __SCHOOL_CODES__
 [save account]
 user = AAAAA
 passwd = **OOXX
-school = （填上方任一代號）
+school = NCUT
 # 上面的 now 填了嗎？一定要記得把 user 名填上去！
 
 [save account]
 user = BBBBB
 passwd = XXOO**
-school = （填上方任一代號）
+school = NCUT
 # 上面的 now 填了嗎？一定要記得把 user 名填上去！
 
 [save account]
@@ -484,7 +485,7 @@ school =
 # （選用）QR 教師輔助帳號。school 填任一支援代號（見上）；course 留空會自動抓第一門課
 user = TTTTT
 passwd = OO**XX
-school = TRONCLASS
+school = NCUT
 course =
 
 [llm]
@@ -500,7 +501,7 @@ api_key =
 [group]
 # （選用）第一人偵測、全員簽到。members 用逗號列出同組 user，再把上面 now 填成「class A」
 class = A
-school = （填上方任一代號）
+school = NCUT
 members = AAAAA,BBBBB
 
 [group]
@@ -571,7 +572,7 @@ DEFAULT_CONFIG = {
     "teacher": {
         "user": "",
         "passwd": "",
-        "school": "tronclass",
+        "school": DEFAULT_PROVIDER,
         "course": "",
     },
     "accounts": {
@@ -581,7 +582,7 @@ DEFAULT_CONFIG = {
                 "user": "YOUR_STUDENT_ID",
                 "passwd": "YOUR_PASSWORD",
                 "label": "legacy config",
-                "school": "thu",
+                "school": DEFAULT_PROVIDER,
             },
         },
     },

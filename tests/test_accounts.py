@@ -500,11 +500,12 @@ class GroupRuntimeIntegrationTest(unittest.IsolatedAsyncioTestCase):
         shutil.rmtree(self.base_dir, ignore_errors=True)
 
     def _with_fake_provider(self, config):
+        # These fixtures explicitly target THU; their fake override must follow it.
         config["provider"] = tron.normalize_provider_config(
             {
-                "current": tron.DEFAULT_PROVIDER,
+                "current": "thu",
                 "available": {
-                    tron.DEFAULT_PROVIDER: {
+                    "thu": {
                         "base_url": self.fake_server.base_url,
                         "login_url": self.fake_server.login_url,
                     }

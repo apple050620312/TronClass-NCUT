@@ -928,7 +928,7 @@ class TronHelpersTest(unittest.TestCase):
 
         self.assertEqual(
             normalized["teacher"],
-            {"user": "", "passwd": "", "school": "tronclass", "course": ""},
+            {"user": "", "passwd": "", "school": "ncut", "course": ""},
         )
 
     def test_normalize_config_accepts_teacher_provider_alias(self) -> None:

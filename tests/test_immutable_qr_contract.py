@@ -103,6 +103,7 @@ class BotSingleImmutableTest(unittest.IsolatedAsyncioTestCase):
         tron.PATH = Path(self.tmp.name) / "log"
         tron.CONFIG.clear()
         tron.CONFIG.update(tron.normalize_config({
+            "provider": {"current": "thu"},
             "account": {"user": "user1", "passwd": "pass1"},
             "accounts": {"current": "default", "profiles": {"default": {"user": "user1", "passwd": "pass1", "label": "Primary"}, "alt": {"user": "user1", "passwd": "pass1", "label": "Alt"}}},
             "integrations": {"bindings": {}, "admins": {"discord": [], "line": []}},

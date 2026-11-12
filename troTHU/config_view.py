@@ -36,7 +36,7 @@ def config_view_summary(config: Mapping[str, Any] | None = None) -> Dict[str, An
         "version": "config-view-v1",
         "profile_count": len(normalized.get("accounts", {}).get("profiles", {})),
         "active_profile": normalized.get("accounts", {}).get("current", "default"),
-        "provider": normalized.get("provider", {}).get("current", "thu"),
+        "provider": normalized.get("provider", {}).get("current", ctx.DEFAULT_PROVIDER),
         "now": simple.get("now", ""),
         "compact_keys": ["now", "account", "teacher", "llm", "group", "operating"],
         "advanced_keys": sorted(advanced.keys()) if isinstance(advanced, Mapping) else [],
@@ -102,7 +102,7 @@ def format_config_doctor(report: Mapping[str, Any]) -> List[str]:
     lines = [
         "設定檢查: {}".format(report.get("status", "unknown")),
         "目前 profile: {}".format(summary.get("active_profile", "default")),
-        "Provider: {}".format(summary.get("provider", "thu")),
+        "Provider: {}".format(summary.get("provider", ctx.DEFAULT_PROVIDER)),
         "常用區塊: {}".format(", ".join(summary.get("compact_keys", [])) or "-"),
     ]
     advanced = summary.get("advanced_keys", [])

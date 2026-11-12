@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
@@ -36,6 +37,7 @@ from troTHU.login_flow import (  # noqa: I001
     _keycloak_captcha_url,
     _fetch_keycloak_captcha,
     _fetch_sso_captcha_bytes,
+    _login_url_candidates,
 )
 
 # A captcha is REQUIRED only when the credential form actually carries a captcha
@@ -137,9 +139,10 @@ async def _classify_login_url(client: tron_http.TronHttpClient, login_url: str, 
 
     detected = detect_sso_form(html) or {}
     if detected.get("password_field"):
+        from troTHU.oaks_sso import is_oaks_login
         action = urljoin(final_url, detected["action"]) if detected.get("action") else final_url
         field_names = sorted((detected.get("fields") or {}).keys())
-        result["form_kind"] = "nam_neai" if is_nam else "credential"
+        result["form_kind"] = "oaks_ajax" if is_oaks_login(html, detected) else ("nam_neai" if is_nam else "credential")
         result["username_field"] = detected.get("username_field") or ""
         result["password_field"] = detected.get("password_field") or ""
         result["action_host"] = urlparse(action).hostname or ""
@@ -189,10 +192,7 @@ async def _resolve_and_classify(client: tron_http.TronHttpClient) -> Dict[str, A
     except Exception:
         pass
 
-    candidates = [primary]
-    cas = base + "/cas/login" if base else ""
-    if cas and cas != primary:
-        candidates.append(cas)
+    candidates = _login_url_candidates(SimpleNamespace(login_url=primary, base_url=base))
 
     last: Dict[str, Any] = {}
     for login_url in candidates:
@@ -223,7 +223,7 @@ async def probe_provider(provider_cfg: Dict[str, Any], *, timeout: float = _PROB
                 started = time.perf_counter()
                 detail = await _resolve_and_classify(client)
                 elapsed_ms = int(round((time.perf_counter() - started) * 1000))
-            ok = detail.get("form_kind") in ("credential", "email_spa", "cas_form", "nam_neai") and (
+            ok = detail.get("form_kind") in ("credential", "email_spa", "cas_form", "nam_neai", "oaks_ajax") and (
                 detail.get("password_field") or detail.get("form_kind") in ("email_spa", "cas_form", "nam_neai")
             )
             status = "ok" if ok else "reachable_but_changed"
